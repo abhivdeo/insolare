@@ -5,8 +5,8 @@ import plotly.express as px
 # Set page configuration
 st.set_page_config(page_title="Electrochemical Data Dashboard", layout="wide")
 
-st.title("⚡ Interactive Electrochemical Dashboard")
-st.markdown("Use the charts below to explore your data. You can hover, zoom, and pan on the graphs.")
+st.title(" Electrolyser Dashboard")
+#st.markdown("Use the charts below to explore your data. You can hover, zoom, and pan on the graphs.")
 
 # Load and clean data
 @st.cache_data
