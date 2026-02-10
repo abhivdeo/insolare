@@ -4,7 +4,7 @@ import plotly.express as px
 import io
 
 st.set_page_config(page_title="H2 Electrolyser Dashboard", layout="wide")
-st.title("⚡ Electrolyser Performance Dashboard")
+st.title("Electrolyser Performance Dashboard")
 
 @st.cache_data
 def load_data(file_path):
@@ -80,7 +80,7 @@ if df_all is not None:
 
         # 3. DETAILED METHODOLOGY
         st.divider()
-        st.header("🔬 Detailed Methodology & Physics")
+        st.header("Detailed Methodology & Physics")
         with st.expander("View Calculation Logic", expanded=False):
             st.markdown("""
             ### Calculation Logic
