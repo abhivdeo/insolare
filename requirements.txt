@@ -4,3 +4,4 @@ plotly
 matplotlib
 seaborn
 statsmodels
+xlsxwriter
