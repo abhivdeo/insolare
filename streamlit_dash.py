@@ -4,7 +4,7 @@ import plotly.express as px
 import io
 
 st.set_page_config(page_title="H2 hydrolyser Dashboard", layout="wide")
-st.title("hydrolyser Performance Dashboard")
+st.title("Hydrolyser Performance Dashboard")
 
 @st.cache_data
 def load_data(file_path):
