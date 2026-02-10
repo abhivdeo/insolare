@@ -78,15 +78,16 @@ if df_all is not None:
                            title="Efficiency Profile (%)", template="plotly_white")
             st.plotly_chart(fig2, use_container_width=True)
 
-        # 3. DETAILED METHODOLOGY
+        # 3. UPDATED DETAILED METHODOLOGY & PHYSICS
         st.divider()
-        st.header("Detailed Methodology & Physics")
-        with st.expander("View Calculation Logic", expanded=False):
-            st.markdown("""
-            ### Calculation Logic
-            * **Voltage Efficiency:** Calculated using the Thermoneutral Voltage (1.48V).
-            * **Faradaic Efficiency:** Based on Faraday's Law, comparing actual H2 flow to theoretical production.
-            """)
+        st.header("🔬 Detailed Methodology & Physics")
+        st.markdown(f"""
+        This dashboard evaluates electrolyser performance using standard electrochemical equations. 
+        **Voltage Efficiency** is calculated as $\eta_{{v}} = (1.48V / V_{{cell}}) \\times 100$, referencing the thermoneutral voltage. 
+        **Faradaic Efficiency** is the ratio of actual $H_2$ flow to theoretical flow: $\eta_{{f}} = (Q_{{act}} / Q_{{th}}) \\times 100$. 
+        The **Theoretical Flow** follows Faraday's Law: $Q_{{th}} = (I \cdot t \cdot V_{{m}}) / (z \cdot F)$, where $z=2$ and $F=96485\,C/mol$. 
+        **Current Density** ($j$) normalizes performance by area: $j = I / Area$ ($A/cm^2$).
+        """)
 
         # 4. EXPORT
         buffer = io.BytesIO()
