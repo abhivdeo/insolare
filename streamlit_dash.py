@@ -1,8 +1,7 @@
 import streamlit as st
 import pandas as pd
 import plotly.express as px
-import numpy as np
-import io  # New import for file handling
+import io
 
 # Set page configuration
 st.set_page_config(page_title="H2 Electrolyser Dashboard", layout="wide")
@@ -11,7 +10,6 @@ st.title("⚡ Electrolyser Performance Dashboard")
 
 @st.cache_data
 def load_data(file_path):
-    # Read metadata (lines starting with #)
     metadata = {}
     try:
         with open(file_path, 'r') as f:
@@ -25,17 +23,19 @@ def load_data(file_path):
         
         df = pd.read_csv(file_path, comment='#')
         df.columns = [col.strip() for col in df.columns]
+        
+        # Add Setup_ID Column from metadata or default
+        df['Setup_ID'] = metadata.get('Experiment_ID', 'Unknown_Setup')
+        
+        # Numeric conversion
         for col in df.columns:
-            if col not in ['Timestamp', 'Notes']:
+            if col not in ['Timestamp', 'Notes', 'Setup_ID']:
                 df[col] = pd.to_numeric(df[col], errors='coerce')
         
-        # --- Efficiency Calculations ---
-        # Voltage Efficiency (compared to thermoneutral 1.48V)
+        # --- Calculations ---
         df['Voltage_Efficiency_%'] = (1.48 / df['Voltage_V']) * 100
-
-        # Faradaic Efficiency (H2)
-        # Theoretical H2 (mL/min) = (I * 60 * 22414) / (2 * 96485)
         F = 96485
+        # Theoretical H2 flow (mL/min)
         df['Theoretical_H2_mLmin'] = (df['Current_A'] * 60 * 22414) / (2 * F)
         df['Faradaic_Efficiency_%'] = (df['H2_Flow_mLmin'] / df['Theoretical_H2_mLmin']) * 100
         
@@ -43,64 +43,70 @@ def load_data(file_path):
     except FileNotFoundError:
         return None, None
 
-df, meta = load_data('electrolysis_test.csv')
+df_raw, meta = load_data('electrolysis_test.csv')
 
-if df is not None:
-    # Sidebar: Display Metadata
+if df_raw is not None:
+    # --- Sidebar Filters ---
+    st.sidebar.header("Data Filters")
+    # Dropdown for Setup_ID (handles future cases with multiple IDs)
+    unique_setups = df_raw['Setup_ID'].unique()
+    selected_setup = st.sidebar.selectbox("Select Setup_ID", options=unique_setups)
+    
+    # Filter dataframe based on selection
+    df = df_raw[df_raw['Setup_ID'] == selected_setup].copy()
+
+    st.sidebar.divider()
     st.sidebar.header("Experiment Metadata")
     for key, value in meta.items():
         st.sidebar.write(f"**{key}:** {value}")
-    
-    # --- NEW: Export Section ---
-    st.sidebar.divider()
-    st.sidebar.header("Export Data")
-    
-    # Create Excel buffer
-    buffer = io.BytesIO()
-    with pd.ExcelWriter(buffer, engine='xlsxwriter') as writer:
-        df.to_excel(writer, index=False, sheet_name='Calculated_Results')
-        # Also save metadata to a second sheet
-        meta_df = pd.DataFrame(list(meta.items()), columns=['Parameter', 'Value'])
-        meta_df.to_excel(writer, index=False, sheet_name='Experiment_Metadata')
-        writer.close()
 
-    st.sidebar.download_button(
-        label="📥 Download Results as Excel",
-        data=buffer.getvalue(),
-        file_name=f"Electrolysis_Results_{meta.get('Experiment_ID', 'Test')}.xlsx",
-        mime="application/vnd.ms-excel"
-    )
+    # --- 1. DATA TABLE (First) ---
+    st.subheader(f"Dataset Preview - Setup: {selected_setup}")
+    # Reordering to show Setup_ID first
+    cols = ['Setup_ID'] + [c for c in df.columns if c != 'Setup_ID']
+    st.dataframe(df[cols], use_container_width=True)
 
-    show_table = st.sidebar.checkbox("Show Data Table", value=True)
-
-    # --- Metrics Row ---
+    # --- 2. METRICS ---
+    st.divider()
     m1, m2, m3, m4 = st.columns(4)
-    avg_faraday = df['Faradaic_Efficiency_%'].mean()
-    m1.metric("Avg Faradaic Efficiency", f"{avg_faraday:.2f}%")
+    m1.metric("Avg Faradaic Efficiency", f"{df['Faradaic_Efficiency_%'].mean():.2f}%")
     m2.metric("Avg Voltage Efficiency", f"{df['Voltage_Efficiency_%'].mean():.2f}%")
     m3.metric("Peak Current Density", f"{df['Current_Density_Acm2'].max()} A/cm²")
     m4.metric("Total Energy", f"{df['Energy_kWh'].max()} kWh")
 
-    st.divider()
-
-    # --- Charts Section ---
+    # --- 3. PLOTS WITH HOVER INFO ---
     col1, col2 = st.columns(2)
+
     with col1:
         st.subheader("Polarization & Efficiency")
-        fig1 = px.line(df, x='Current_Density_Acm2', y=['Voltage_V', 'Voltage_Efficiency_%'],
-                       markers=True, template="plotly_white")
+        # Added hover_data for calculated columns
+        fig1 = px.line(df, x='Current_Density_Acm2', y='Voltage_V',
+                       hover_data=['Voltage_Efficiency_%', 'Faradaic_Efficiency_%', 'Temp_C'],
+                       markers=True, template="plotly_white", title="V vs J (with Efficiency Hover)")
         st.plotly_chart(fig1, use_container_width=True)
 
     with col2:
         st.subheader("Gas Production Stability")
         fig2 = px.line(df, x='Time_Elapsed_s', y=['H2_Flow_mLmin', 'Theoretical_H2_mLmin'],
-                          template="plotly_white")
+                       hover_data=['Faradaic_Efficiency_%', 'Current_A'],
+                       template="plotly_white", title="H2 Flow (Actual vs Theoretical)")
         st.plotly_chart(fig2, use_container_width=True)
 
-    # --- Data Display ---
-    if show_table:
-        st.divider()
-        st.subheader("Calculated Dataset")
-        st.dataframe(df, use_container_width=True)
+    # --- 4. EXPORT ---
+    buffer = io.BytesIO()
+    # Note: Ensure xlsxwriter is in your requirements.txt
+    try:
+        with pd.ExcelWriter(buffer, engine='xlsxwriter') as writer:
+            df.to_excel(writer, index=False, sheet_name='Results')
+        
+        st.sidebar.download_button(
+            label="📥 Download Excel Report",
+            data=buffer.getvalue(),
+            file_name=f"Report_{selected_setup}.xlsx",
+            mime="application/vnd.ms-excel"
+        )
+    except:
+        st.sidebar.warning("Install 'xlsxwriter' to enable Excel export.")
+
 else:
-    st.error("File 'electrolysis_test.csv' not found.")
+    st.error("Please ensure 'electrolysis_test.csv' is in the directory.")
