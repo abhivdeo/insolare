@@ -80,7 +80,7 @@ if df_all is not None:
 
         # 3. UPDATED DETAILED METHODOLOGY & PHYSICS
         st.divider()
-        st.header("🔬 Detailed Methodology & Physics")
+        st.header("Detailed Methodology & Physics")
         st.markdown(f"""
         This dashboard evaluates hydrolyser performance using standard electrochemical equations. 
         **Voltage Efficiency** is calculated as $\eta_{{v}} = (1.48V / V_{{cell}}) \\times 100$, referencing the thermoneutral voltage. 
