@@ -22,14 +22,9 @@ def load_data(file_path):
         df = pd.read_csv(file_path, comment='#')
         df.columns = [col.strip() for col in df.columns]
         
-        # Add Setup and Area from metadata
+        # Pull metadata
         df['Setup_ID'] = metadata.get('Experiment_ID', 'Unknown')
         df['Active_Area_cm2'] = float(metadata.get('Active_Area_cm2', 0))
-        
-        # Numeric conversion
-        for col in df.columns:
-            if col not in ['Timestamp', 'Notes', 'Setup_ID']:
-                df[col] = pd.to_numeric(df[col], errors='coerce')
         
         # Calculations
         df['Voltage_Efficiency_%'] = (1.48 / df['Voltage_V']) * 100
@@ -39,69 +34,58 @@ def load_data(file_path):
         
         return df, metadata
     except Exception as e:
-        st.error(f"Error: {e}")
+        st.error(f"Error loading file: {e}")
         return None, None
 
 df_raw, meta = load_data('electrolysis_test.csv')
 
 if df_raw is not None:
-    # Sidebar Filters
-    st.sidebar.header("Data Filters")
-    selected_setup = st.sidebar.selectbox("Select Setup_ID", options=df_raw['Setup_ID'].unique())
+    # Sidebar Filter
+    unique_setups = df_raw['Setup_ID'].unique()
+    selected_setup = st.sidebar.selectbox("Select Setup_ID", options=unique_setups)
     df = df_raw[df_raw['Setup_ID'] == selected_setup].copy()
 
-    # --- 1. DATA TABLE (With requested columns) ---
+    # 1. DATA TABLE (Safe column selection)
     st.subheader(f"Dataset Preview - {selected_setup}")
-    
-    # Define exact order including new columns
-    display_cols = [
-        'Setup_ID', 'Active_Area_cm2', 'Timestamp', 'Voltage_V', 'Current_A', 
-        'Temp_C', 'pH', 'Pressure_bar', 'H2_Flow_mLmin', 'O2_Flow_mLmin', 
-        'Voltage_Efficiency_%', 'Faradaic_Efficiency_%'
-    ]
-    # Filter only columns that actually exist in the CSV to prevent KeyErrors
-    final_cols = [c for c in display_cols if c in df.columns]
+    cols_to_show = ['Setup_ID', 'Active_Area_cm2', 'Timestamp', 'Voltage_V', 'Current_A', 
+                    'Temp_C', 'pH', 'Pressure_bar', 'H2_Flow_mLmin', 'O2_Flow_mLmin', 
+                    'Voltage_Efficiency_%', 'Faradaic_Efficiency_%']
+    # Filter only columns that actually exist
+    final_cols = [c for c in cols_to_show if c in df.columns]
     st.dataframe(df[final_cols], use_container_width=True)
 
-    # --- 2. SUMMARY METRICS ---
-    st.divider()
-    m1, m2, m3, m4, m5 = st.columns(5)
-    m1.metric("Avg Faradaic Eff.", f"{df['Faradaic_Efficiency_%'].mean():.1f}%")
-    m2.metric("Avg Voltage Eff.", f"{df['Voltage_Efficiency_%'].mean():.1f}%")
-    m3.metric("Avg Temp", f"{df['Temp_C'].mean():.1f} °C")
-    m4.metric("Avg pH", f"{df['pH'].mean():.2f}")
-    # Display pressure if it exists
-    if 'Pressure_bar' in df.columns:
-        m5.metric("Avg Pressure", f"{df['Pressure_bar'].mean():.1f} bar")
-
-    # --- 3. PLOTS ---
+    # 2. PLOTS
     st.divider()
     col1, col2 = st.columns(2)
     with col1:
-        fig1 = px.line(df, x='Current_Density_Acm2', y='Voltage_V', 
-                       hover_data=['Temp_C', 'pH', 'Pressure_bar'],
-                       markers=True, title="Polarization Curve", template="plotly_white")
-        st.plotly_chart(fig1, use_container_width=True)
+        # We check if required columns for the plot exist
+        if 'Current_Density_Acm2' in df.columns and 'Voltage_V' in df.columns:
+            # Safely build hover data
+            h_data = [c for c in ['Temp_C', 'pH', 'Pressure_bar'] if c in df.columns]
+            fig1 = px.line(df, x='Current_Density_Acm2', y='Voltage_V', 
+                           hover_data=h_data, markers=True, title="Polarization Curve", template="plotly_white")
+            st.plotly_chart(fig1, use_container_width=True)
     
     with col2:
         fig2 = px.line(df, x='Time_Elapsed_s', y=['H2_Flow_mLmin', 'O2_Flow_mLmin'], 
                        title="Gas Production Rates", template="plotly_white")
         st.plotly_chart(fig2, use_container_width=True)
 
-    # --- 4. LOGIC EXPLANATION ---
+    # 3. LOGIC BOX
     st.divider()
     st.subheader("Calculation Methodology")
     st.info("""
-    * **Voltage Efficiency**: Calculated using the thermoneutral voltage ($1.48V$). It represents the ratio of energy stored in hydrogen to the total electrical energy input.
-    * **Faradaic Efficiency**: Compares the actual $H_2$ flow rate measured against the theoretical rate predicted by Faraday's Law ($2$ electrons per molecule of $H_2$).
-    * **Pressure & Temperature**: These are critical environmental factors; higher pressures usually require specialized cell designs, and temperature impacts the ionic conductivity of the electrolyte.
+    * **Voltage Efficiency**: $\eta_v = (1.48V / V_{measured}) \\times 100$
+    * **Faradaic Efficiency**: Compares measured $H_2$ vs theoretical gas produced per Ampere-second.
     """)
 
-    # --- EXPORT ---
+    # 4. EXPORT
     try:
         buffer = io.BytesIO()
         with pd.ExcelWriter(buffer, engine='xlsxwriter') as writer:
             df.to_excel(writer, index=False)
-        st.sidebar.download_button("📥 Download Excel Report", data=buffer.getvalue(), file_name=f"{selected_setup}_Report.xlsx")
-    except:
-        st.sidebar.warning("Export disabled. Add 'xlsxwriter' to requirements.txt.")
+        st.sidebar.download_button("📥 Download Excel Report", data=buffer.getvalue(), file_name="Report.xlsx")
+    except ImportError:
+        st.sidebar.warning("Add 'xlsxwriter' to requirements.txt for Excel downloads.")
+else:
+    st.warning("Ensure 'electrolysis_test.csv' is uploaded and formatted correctly.")
