@@ -3,8 +3,8 @@ import pandas as pd
 import plotly.express as px
 import io
 
-st.set_page_config(page_title="H2 hydrolyser Dashboard", layout="wide")
-st.title("Hydrolyser Performance Dashboard")
+st.set_page_config(page_title="H2 Electrolyser Dashboard", layout="wide")
+st.title("Electrolyser Performance Dashboard")
 
 @st.cache_data
 def load_data(file_path):
@@ -82,7 +82,7 @@ if df_all is not None:
         st.divider()
         st.header("Detailed Methodology & Physics")
         st.markdown(f"""
-        This dashboard evaluates hydrolyser performance using standard electrochemical equations. 
+        This dashboard evaluates electrolyser performance using standard electrochemical equations. 
         **Voltage Efficiency** is calculated as $\eta_{{v}} = (1.48V / V_{{cell}}) \\times 100$, referencing the thermoneutral voltage. 
         **Faradaic Efficiency** is the ratio of actual $H_2$ flow to theoretical flow: $\eta_{{f}} = (Q_{{act}} / Q_{{th}}) \\times 100$. 
         The **Theoretical Flow** follows Faraday's Law: $Q_{{th}} = (I \cdot t \cdot V_{{m}}) / (z \cdot F)$, where $z=2$ and $F=96485\,C/mol$. 
