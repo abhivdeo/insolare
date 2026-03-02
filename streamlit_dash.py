@@ -13,7 +13,7 @@ st.set_page_config(
     page_icon="⚡"
 )
 
-st.title("⚡ H2 Electrolyser Performance Dashboard")
+st.title("Electrolyser Performance Dashboard")
 st.markdown("Advanced performance analytics for electrochemical hydrogen systems")
 
 # -----------------------------------------------------------
@@ -156,40 +156,17 @@ if df_all is not None:
         # -------------------------------------------------------
         st.subheader("📘 Methodology & Electrochemical Framework")
 
-        st.markdown("""
-        **Voltage Efficiency**
-
-        \\[
-        \\eta_v = \\left( \\frac{1.48}{V_{cell}} \\right) \\times 100
-        \\]
-
-        1.48 V represents the thermoneutral voltage for water electrolysis.
-
-        **Faradaic Efficiency**
-
-        \\[
-        \\eta_f = \\left( \\frac{Q_{actual}}{Q_{theoretical}} \\right) \\times 100
-        \\]
-
-        **Theoretical Hydrogen Flow (Faraday's Law)**
-
-        \\[
-        Q_{th} = \\frac{I \\cdot 60 \\cdot V_m}{z \\cdot F}
-        \\]
-
-        where:
-        - \\(F = 96485 \\, C/mol\\)
-        - \\(z = 2\\)
-        - \\(V_m = 22414 \\, mL/mol\\)
-
-        **Current Density**
-
-        \\[
-        j = \\frac{I}{Area}
-        \\]
-
-        Performance normalization enables cross-setup comparison.
+       # 3. UPDATED DETAILED METHODOLOGY & PHYSICS
+        st.divider()
+        st.header("Detailed Methodology & Physics")
+        st.markdown(f"""
+        This dashboard evaluates electrolyser performance using standard electrochemical equations. 
+        **Voltage Efficiency** is calculated as $\eta_{{v}} = (1.48V / V_{{cell}}) \\times 100$, referencing the thermoneutral voltage. 
+        **Faradaic Efficiency** is the ratio of actual $H_2$ flow to theoretical flow: $\eta_{{f}} = (Q_{{act}} / Q_{{th}}) \\times 100$. 
+        The **Theoretical Flow** follows Faraday's Law: $Q_{{th}} = (I \cdot t \cdot V_{{m}}) / (z \cdot F)$, where $z=2$ and $F=96485\,C/mol$. 
+        **Current Density** ($j$) normalizes performance by area: $j = I / Area$ ($A/cm^2$).
         """)
+
 
         # -------------------------------------------------------
         # EXPORT
